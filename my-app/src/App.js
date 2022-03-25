@@ -1,24 +1,78 @@
-import logo from './logo.svg';
+// import logo from './logo.svg';
 import './App.css';
 
-function App() {
+import React from 'react'
+import { useState, useCallback } from 'react'
+import * as tf from '@tensorflow/tfjs'
+
+import { ModelContext } from './components/model-context';
+import Selector from './components/utils/Selector';
+
+
+const MODEL_URL = process.env.PUBLIC_URL + '/model/';
+const LABELS_URL = MODEL_URL + 'labels.json'
+const MODEL_JSON = MODEL_URL + 'model.json'
+
+const App = () => {
+  const [model, setModel] = useState(null)
+  const [labels, setLabels] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState('');
+
+  const fetchModel = useCallback((model) => {
+    setModel(model);
+  }, []);
+
+  const fetchLabels = useCallback((labels) => {
+    setLabels(labels);
+  }, []);
+
+  const selectMode  = useCallback((selected) => {
+    setSelected(selected);
+  }, []);
+
+  const loadModel = async () => {
+    setLoading(true)
+    const model = await tf.loadGraphModel(MODEL_JSON)
+    fetchModel(model)
+    const response = await fetch(LABELS_URL)
+    let labels = await response.json()
+    fetchLabels(labels)
+    setLoading(false)
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ModelContext.Provider 
+      value={{
+        model: model, 
+        fetchModel: fetchModel, 
+        labels: labels, 
+        fetchLabels: fetchLabels,
+        selected: selected,
+        selectMode: selectMode
+      }}>
+        <div className='header-div'>
+          植物病害识别系统
+        </div>
+        <div>
+          {model ? (
+            <div>
+              <Selector />
+            </div>) : (
+              <div className='center-div load-div'>
+                {loading ? (
+                  <div style={{ textAlign: 'center' }}>
+                    
+                  </div>
+                ) : (
+                  <button className="css-btn" style={{ width: '60%' }} onClick={loadModel}>
+                      <p style={{ fontSize: '16px', fontWeight: '500' }}>加载模型</p>
+                    </button>
+                )}
+              </div>
+            )}
+        </div>
+    </ModelContext.Provider>
   );
 }
 
